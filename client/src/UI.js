@@ -143,9 +143,15 @@ export class UI {
   }
 
   updateBoost(length) {
-    const maxBoost = Math.max(0, length - 5);
-    const percent = Math.min(100, (maxBoost / Math.max(1, length)) * 100);
+    const boostReserve = Math.max(0, length - 20);
+    const percent = Math.min(100, (boostReserve / Math.max(1, length)) * 100);
     this.boostBar.style.width = `${percent}%`;
+
+    const boostButton = document.getElementById('mobile-boost-btn');
+    if (boostButton) {
+      boostButton.style.setProperty('--boost-charge', `${percent}%`);
+      boostButton.classList.toggle('charged', percent > 0);
+    }
   }
 
   updatePowerUps(powerUps) {

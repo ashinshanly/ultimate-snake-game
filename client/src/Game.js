@@ -85,6 +85,8 @@ export class Game {
     this.playerId = data.playerId;
     this.arenaSize = data.arenaSize || 6000;
     this.selfState = data.selfState;
+    if (this.renderer) this.renderer.setArenaSize(this.arenaSize);
+    if (this.snakeRenderer) this.snakeRenderer.setArenaSize(this.arenaSize);
 
     // Initial orbs
     if (data.orbs) {
@@ -243,6 +245,7 @@ export class Game {
 
     // Update visuals
     this.ui.animateScore();
+    if (this.snakeRenderer) this.snakeRenderer.update(now);
     if (this.arena) this.arena.update(now);
     if (this.orbRenderer) this.orbRenderer.update(now);
     if (this.effects) this.effects.update(now);

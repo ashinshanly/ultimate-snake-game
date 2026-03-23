@@ -6,13 +6,16 @@ export class Input {
     this.direction = 0;
     this.boosting = false;
     this.active = false;
-    this.isMobile = ('ontouchstart' in window || navigator.maxTouchPoints > 0) || window.innerWidth <= 1024;
+    this.isMobile = this._detectTouchMode();
+    this.mobileControlsReady = false;
 
     this._bindEvents();
+    this._createMobileControls();
+    this._syncControlMode();
+  }
 
-    if (this.isMobile) {
-      this._createMobileControls();
-    }
+  _detectTouchMode() {
+    return ('ontouchstart' in window || navigator.maxTouchPoints > 0) && window.innerWidth <= 1200;
   }
 
   _bindEvents() {
@@ -51,13 +54,25 @@ export class Input {
     document.addEventListener('gesturestart', (e) => e.preventDefault());
     document.addEventListener('gesturechange', (e) => e.preventDefault());
     document.addEventListener('gestureend', (e) => e.preventDefault());
+
+    window.addEventListener('resize', () => {
+      const nextMode = this._detectTouchMode();
+      if (nextMode !== this.isMobile) {
+        this.isMobile = nextMode;
+        this._syncControlMode();
+      }
+    });
   }
 
   _createMobileControls() {
+    if (this.mobileControlsReady) return;
+
     // Target the new console wrappers
     const boostWrapper = document.getElementById('boost-wrapper');
     const joystickWrapper = document.getElementById('joystick-wrapper');
     if (!boostWrapper || !joystickWrapper) return;
+
+    this.mobileControlsReady = true;
 
     // === HAPTICS ===
     this.vibrate = (ms = 10) => {
@@ -93,30 +108,44 @@ export class Input {
     boostBtn.addEventListener('touchstart', handleBoostStart, { passive: false });
     boostBtn.addEventListener('touchend', handleBoostEnd, { passive: false });
     boostBtn.addEventListener('touchcancel', handleBoostEnd);
+    boostBtn.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse') handleBoostStart(e);
+    });
+    boostBtn.addEventListener('pointerup', handleBoostEnd);
+    boostBtn.addEventListener('pointerleave', handleBoostEnd);
+    boostBtn.addEventListener('pointercancel', handleBoostEnd);
 
     // === START/SELECT BUTTON EXTERNAL WIRING ===
     const startBtn = document.getElementById('start-btn');
     const selectBtn = document.getElementById('select-btn');
-    
+
+    const triggerStart = (e) => {
+      e.preventDefault();
+      this.vibrate(20);
+      const playBtn = document.getElementById('play-btn');
+      if (playBtn && playBtn.offsetParent !== null) {
+        playBtn.click();
+      }
+    };
+
+    const triggerSelect = (e) => {
+      e.preventDefault();
+      this.vibrate(10);
+      const nameInput = document.getElementById('player-name');
+      if (nameInput && document.getElementById('join-screen')?.style.display !== 'none') {
+        nameInput.focus();
+        nameInput.select();
+      }
+    };
+
     if (startBtn) {
-      startBtn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        this.vibrate(20);
-        // Simulate clicking the main play button if it's visible
-        const playBtn = document.getElementById('play-btn');
-        if (playBtn && playBtn.offsetParent !== null) {
-          playBtn.click();
-        }
-      });
+      startBtn.addEventListener('touchstart', triggerStart, { passive: false });
+      startBtn.addEventListener('click', triggerStart);
     }
 
     if (selectBtn) {
-      selectBtn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        this.vibrate(10);
-        // Maybe toggle leaderboard or something in future
-        console.log('SELECT pressed');
-      });
+      selectBtn.addEventListener('touchstart', triggerSelect, { passive: false });
+      selectBtn.addEventListener('click', triggerSelect);
     }
 
     // Create Virtual Joystick inside wrapper
@@ -164,13 +193,28 @@ export class Input {
         const t = e.changedTouches[i];
         if (t.identifier === activeTouchId) {
           activeTouchId = null;
-          stick.style.transform = `translate(0px, 0px)`;
+          stick.style.transform = 'translate(-50%, -50%)';
         }
       }
     };
     
     joystickZone.addEventListener('touchend', stopTouch);
     joystickZone.addEventListener('touchcancel', stopTouch);
+  }
+
+  _syncControlMode() {
+    document.body.classList.toggle('touch-device', this.isMobile);
+    document.body.classList.toggle('desktop-device', !this.isMobile);
+
+    const modeLabel = document.getElementById('console-mode-label');
+    if (modeLabel) {
+      modeLabel.textContent = this.isMobile ? 'TOUCH MODE' : 'DESKTOP MODE';
+    }
+
+    const consoleEl = document.getElementById('mobile-console');
+    if (consoleEl && consoleEl.style.display !== 'none') {
+      consoleEl.style.display = this.isMobile ? 'flex' : 'none';
+    }
   }
 
   _handleJoystickMove(touch, base, stick, maxRadius) {
@@ -190,7 +234,7 @@ export class Input {
       ny = (dy / dist) * maxRadius;
     }
     
-    stick.style.transform = `translate(${nx}px, ${ny}px)`;
+    stick.style.transform = `translate(calc(-50% + ${nx}px), calc(-50% + ${ny}px))`;
     
     if (dist > 5) {
       // Invert Y to match game world mapping (+Y = UP)
@@ -200,7 +244,7 @@ export class Input {
 
   show() {
     const consoleEl = document.getElementById('mobile-console');
-    if (consoleEl && this.isMobile) consoleEl.style.display = 'flex';
+    if (consoleEl) consoleEl.style.display = this.isMobile ? 'flex' : 'none';
   }
 
   hide() {

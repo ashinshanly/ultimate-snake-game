@@ -84,30 +84,24 @@
             <canvas id="minimap" width="160" height="160"></canvas>
         </div>
 
-        <!-- Mobile Controls Console -->
+        <!-- Controls Console -->
         <div id="mobile-console">
             <div id="console-top-strip">
-                <div id="battery-led"></div>
-                <div id="console-status">POWER ON</div>
-            </div>
-            <div id="joystick-wrapper"></div>
-            <div id="console-center-btns">
-                <div class="pill-btn-group">
-                    <div class="pill-btn-wrap">
-                        <button id="select-btn" class="pill-btn"></button>
-                        <label>SELECT</label>
-                    </div>
-                    <div class="pill-btn-wrap">
-                        <button id="start-btn" class="pill-btn"></button>
-                        <label>START</label>
-                    </div>
+                <div class="console-status-group">
+                    <div id="battery-led"></div>
+                    <div id="console-status">CONTROL DECK ONLINE</div>
                 </div>
             </div>
-            <div id="mobile-branding">
-                <span class="brand-top">SERPENT</span>
-                <span class="brand-bottom">GAME BOY TYPE-MODERN</span>
+
+            <div class="console-main">
+                <section class="console-panel control-cluster control-cluster-left">
+                    <div id="joystick-wrapper"></div>
+                </section>
+
+                <section class="console-panel control-cluster control-cluster-right">
+                    <div id="boost-wrapper"></div>
+                </section>
             </div>
-            <div id="boost-wrapper"></div>
         </div>
     </div>
 

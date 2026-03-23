@@ -17,6 +17,8 @@ class Game {
     this.leaderboardInterval = 100; // ms
     this.lastLeaderboardUpdate = 0;
     this.viewRadius = 2000;
+    this.compactStateCache = new Map();
+    this.minimapCache = [];
 
     this.orbManager.init();
   }
@@ -167,6 +169,7 @@ class Game {
     // Update managers
     this.orbManager.update();
     this.powerUpManager.update(this.tickRate);
+    this._rebuildStateCaches();
 
     // Update leaderboard
     let leaderboardData = null;
@@ -189,31 +192,17 @@ class Game {
     const nearbyPlayers = this._getPlayersInArea(head.x, head.y, this.viewRadius, playerId);
 
     // Get nearby orbs
-    const orbDelta = this.orbManager.getDelta();
     const nearbyOrbs = this.orbManager.getInArea(head.x, head.y, this.viewRadius);
 
     const puDelta = this.powerUpManager.getDelta();
 
-    // Add global minimap data representing EVERY active player
-    const minimap = [];
-    for (const [id, p] of this.players) {
-      if (p.alive && p.segments.length > 0) {
-        minimap.push([
-          id,
-          Math.round(p.segments[0].x),
-          Math.round(p.segments[0].y),
-          Math.round(p.hue || 0)
-        ]);
-      }
-    }
-
     return {
       type: 'update',
-      self: player.getCompactState(),
+      self: this.compactStateCache.get(playerId) || player.getCompactState(),
       players: nearbyPlayers,
       orbs: nearbyOrbs.map(o => [o.id, Math.round(o.x), Math.round(o.y), o.value, o.type === 'special' ? 1 : 0]),
       pu: puDelta,
-      mm: minimap
+      mm: this.minimapCache
     };
   }
 
@@ -230,10 +219,27 @@ class Game {
       const dx = x - head.x;
       const dy = y - head.y;
       if (dx * dx + dy * dy < r2) {
-        result.push(player.getCompactState());
+        result.push(this.compactStateCache.get(id) || player.getCompactState());
       }
     }
     return result;
+  }
+
+  _rebuildStateCaches() {
+    this.compactStateCache.clear();
+    this.minimapCache = [];
+
+    for (const [id, player] of this.players) {
+      if (!player.alive || player.segments.length === 0) continue;
+      const compact = player.getCompactState();
+      this.compactStateCache.set(id, compact);
+      this.minimapCache.push([
+        id,
+        Math.round(player.segments[0].x),
+        Math.round(player.segments[0].y),
+        Math.round(player.hue || 0)
+      ]);
+    }
   }
 }
 

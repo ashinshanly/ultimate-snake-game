@@ -6,7 +6,13 @@ export class SnakeRenderer {
     this.scene = scene;
     this.snakes = new Map(); // id -> mesh group
     this.bodyMaterial = null;
+    this.lastUpdateTime = performance.now();
+    this.arenaSize = 6000;
     this._initMaterials();
+  }
+
+  setArenaSize(arenaSize) {
+    this.arenaSize = arenaSize || this.arenaSize;
   }
 
   _initMaterials() {
@@ -58,6 +64,15 @@ export class SnakeRenderer {
         hue,
         material: this._createSnakeMaterial(hue),
         headMaterial: this._createHeadMaterial(hue),
+        targetSegments: [],
+        renderSegments: [],
+        headRadius: 12,
+        dir: null,
+        targetDir: 0,
+        boosting: false,
+        targetBoosting: false,
+        phaseActive: false,
+        score: 0,
       };
 
       // Create head
@@ -110,93 +125,154 @@ export class SnakeRenderer {
       this.snakes.set(id, group);
     }
 
-    // --- Update positions ---
     const segCount = segments.length;
 
-    // Ensure enough body meshes
     while (group.bodyMeshes.length < segCount) {
       const mesh = new THREE.Mesh(this.segmentGeo, group.material);
       group.bodyMeshes.push(mesh);
       group.container.add(mesh);
     }
-    // Hide excess
+    group.targetSegments.length = segCount;
+    group.renderSegments.length = segCount;
+    for (let i = 0; i < segCount; i++) {
+      const sx = Array.isArray(segments[i]) ? segments[i][0] : segments[i].x;
+      const sy = Array.isArray(segments[i]) ? segments[i][1] : segments[i].y;
+      const target = group.targetSegments[i] || { x: sx, y: sy };
+      target.x = sx;
+      target.y = sy;
+      group.targetSegments[i] = target;
+
+      if (!group.renderSegments[i]) {
+        group.renderSegments[i] = { x: sx, y: sy };
+      }
+    }
+    group.targetSegments.length = segCount;
+
     for (let i = segCount; i < group.bodyMeshes.length; i++) {
       group.bodyMeshes[i].visible = false;
     }
 
-    // Evolution: size scaling based on score
-    const evolution = Math.min(score / 100, 1); // 0-1
-    const baseSize = headRadius * (0.8 + evolution * 0.4);
+    group.headRadius = headRadius;
+    group.score = score;
+    group.targetDir = data.dir || data.direction || 0;
+    if (group.dir === null) {
+      group.dir = group.targetDir;
+    }
+    group.targetBoosting = boosting;
+    group.phaseActive = (data.pu || 0) === 2;
 
-    // Update head position
-    const hx = Array.isArray(segments[0]) ? segments[0][0] : segments[0].x;
-    const hy = Array.isArray(segments[0]) ? segments[0][1] : segments[0].y;
+    this._applySnakeVisuals(group, 1);
+  }
 
-    group.headMesh.position.set(hx, hy, 5);
+  update(time = performance.now()) {
+    const dt = Math.min(0.05, (time - this.lastUpdateTime) / 1000 || 0.016);
+    this.lastUpdateTime = time;
+    const blend = 1 - Math.exp(-dt * 14);
+    const boostBlend = 1 - Math.exp(-dt * 10);
+
+    for (const group of this.snakes.values()) {
+      if (!group.targetSegments.length) continue;
+
+      for (let i = 0; i < group.targetSegments.length; i++) {
+        const render = group.renderSegments[i];
+        const target = group.targetSegments[i];
+        render.x = this._interpolateWrapped(render.x, target.x, blend);
+        render.y = this._interpolateWrapped(render.y, target.y, blend);
+      }
+
+      group.dir = this._lerpAngle(group.dir, group.targetDir, blend);
+      const boostValue = group.targetBoosting ? 1 : 0;
+      group.boosting += (boostValue - group.boosting) * boostBlend;
+
+      this._applySnakeVisuals(group, group.boosting);
+    }
+  }
+
+  _applySnakeVisuals(group, boostLevel) {
+    const segCount = group.targetSegments.length;
+    if (segCount === 0) return;
+
+    const evolution = Math.min(group.score / 100, 1);
+    const baseSize = group.headRadius * (0.8 + evolution * 0.4);
+    const head = group.renderSegments[0];
+
+    group.headMesh.position.set(head.x, head.y, 5);
     group.headMesh.scale.setScalar(baseSize);
 
-    // Eyes
-    const dir = data.dir || data.direction || 0;
-    const eyeOffsetX = Math.cos(dir) * baseSize * 0.5;
-    const eyeOffsetY = Math.sin(dir) * baseSize * 0.5;
+    const eyeOffsetX = Math.cos(group.dir) * baseSize * 0.5;
+    const eyeOffsetY = Math.sin(group.dir) * baseSize * 0.5;
     const eyeSide = baseSize * 0.35;
 
     group.eyes[0].position.set(
-      hx + eyeOffsetX - Math.sin(dir) * eyeSide,
-      hy + eyeOffsetY + Math.cos(dir) * eyeSide,
+      head.x + eyeOffsetX - Math.sin(group.dir) * eyeSide,
+      head.y + eyeOffsetY + Math.cos(group.dir) * eyeSide,
       8
     );
     group.eyes[1].position.set(
-      hx + eyeOffsetX + Math.sin(dir) * eyeSide,
-      hy + eyeOffsetY - Math.cos(dir) * eyeSide,
+      head.x + eyeOffsetX + Math.sin(group.dir) * eyeSide,
+      head.y + eyeOffsetY - Math.cos(group.dir) * eyeSide,
       8
     );
     group.eyes[0].scale.setScalar(baseSize * 0.25);
     group.eyes[1].scale.setScalar(baseSize * 0.25);
 
-    // Name position
     if (group.nameMesh) {
-      group.nameMesh.position.set(hx, hy + baseSize + 25, 10);
+      group.nameMesh.position.set(head.x, head.y + baseSize + 25, 10);
     }
 
-    // Update body segments with gradient
     for (let i = 0; i < segCount; i++) {
       const mesh = group.bodyMeshes[i];
+      const render = group.renderSegments[i];
       mesh.visible = true;
+      mesh.position.set(render.x, render.y, 2);
 
-      const sx = Array.isArray(segments[i]) ? segments[i][0] : segments[i].x;
-      const sy = Array.isArray(segments[i]) ? segments[i][1] : segments[i].y;
-
-      mesh.position.set(sx, sy, 2);
-
-      // Taper toward tail
       const t = i / Math.max(1, segCount - 1);
       const segSize = baseSize * (1 - t * 0.5);
       mesh.scale.setScalar(segSize * 0.85);
-
-      // Gradient effect via material color shift
-      if (i % 3 === 0) {
-        const gradientHue = ((hue + t * 60) % 360) / 360;
-        mesh.material = group.material;
-      }
     }
 
-    // Boost visual — increase emissive intensity
-    const intensity = boosting ? 1.6 : 0.8;
-    group.material.emissiveIntensity = intensity;
-    group.headMaterial.emissiveIntensity = boosting ? 2.0 : 1.2;
+    group.material.emissiveIntensity = 0.8 + boostLevel * 0.8;
+    group.headMaterial.emissiveIntensity = 1.2 + boostLevel * 0.8;
 
-    // Power-up visual (phase = transparent)
-    const puState = data.pu || 0;
-    if (puState === 2) {
-      // Phase
+    if (group.phaseActive) {
       group.material.opacity = 0.4;
       group.material.transparent = true;
     } else {
       group.material.opacity = 1;
       group.material.transparent = false;
-      group.headMaterial.emissive.setHSL(hue / 360, 1, 0.4);
+      group.headMaterial.emissive.setHSL(group.hue / 360, 1, 0.4);
     }
+  }
+
+  _lerpAngle(from, to, alpha) {
+    let diff = to - from;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    return from + diff * alpha;
+  }
+
+  _interpolateWrapped(from, to, alpha) {
+    const delta = this._getWrappedDelta(from, to);
+    return this._normalizeWrappedCoord(from + delta * alpha);
+  }
+
+  _getWrappedDelta(from, to) {
+    const size = this.arenaSize;
+    if (!size) return to - from;
+    let delta = to - from;
+    const half = size / 2;
+    if (delta > half) delta -= size;
+    if (delta < -half) delta += size;
+    return delta;
+  }
+
+  _normalizeWrappedCoord(value) {
+    const size = this.arenaSize;
+    if (!size) return value;
+    const half = size / 2;
+    if (value > half) return value - size;
+    if (value < -half) return value + size;
+    return value;
   }
 
   removeSnake(id) {

@@ -16,12 +16,20 @@ const game = new Game();
 const clients = new Map(); // ws -> playerId
 let nextPlayerId = 1;
 
+function getAlivePlayerCount() {
+  let count = 0;
+  for (const player of game.players.values()) {
+    if (player.alive) count++;
+  }
+  return count;
+}
+
 wss.on('connection', (ws) => {
   const playerId = `p${nextPlayerId++}`;
   clients.set(ws, { id: playerId, joined: false });
 
   // Send initial stats on connect
-  ws.send(JSON.stringify({ type: 'stats', players: Array.from(game.players.values()).filter(p => p.alive).length }));
+  ws.send(JSON.stringify({ type: 'stats', players: getAlivePlayerCount() }));
 
   ws.on('message', (raw) => {
     try {
@@ -36,7 +44,7 @@ wss.on('connection', (ws) => {
           console.log(`[JOIN] ${msg.name} (${playerId}) — ${game.players.size} players`);
           
           // Broadcast to non-joined clients
-          const pCount = Array.from(game.players.values()).filter(p => p.alive).length;
+          const pCount = getAlivePlayerCount();
           const statsMsg = JSON.stringify({ type: 'stats', players: pCount });
           for (const [otherWs, otherClient] of clients) {
             if (!otherClient.joined && otherWs.readyState === 1) {
@@ -76,7 +84,7 @@ wss.on('connection', (ws) => {
       console.log(`[LEAVE] ${playerId} — ${game.players.size} players`);
       
       // Broadcast to non-joined clients
-      const pCount = Array.from(game.players.values()).filter(p => p.alive).length;
+      const pCount = getAlivePlayerCount();
       const statsMsg = JSON.stringify({ type: 'stats', players: pCount });
       for (const [otherWs, otherClient] of clients) {
         if (!otherClient.joined && otherWs.readyState === 1) {

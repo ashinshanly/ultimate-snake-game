@@ -188,11 +188,26 @@ class Player {
   }
 
   getCompactState() {
-    // Send fewer segments for distant players
+    const step = this.segments.length > 120 ? 3 : this.segments.length > 60 ? 2 : 1;
+    const segs = [];
+    for (let i = 0; i < this.segments.length; i += step) {
+      const s = this.segments[i];
+      segs.push([Math.round(s.x), Math.round(s.y)]);
+    }
+    const tail = this.segments[this.segments.length - 1];
+    if (tail && step > 1) {
+      const last = segs[segs.length - 1];
+      const tailX = Math.round(tail.x);
+      const tailY = Math.round(tail.y);
+      if (!last || last[0] !== tailX || last[1] !== tailY) {
+        segs.push([tailX, tailY]);
+      }
+    }
+
     return {
       id: this.id,
       name: this.name,
-      segs: this.segments.map(s => [Math.round(s.x), Math.round(s.y)]),
+      segs,
       dir: Math.round(this.direction * 100) / 100,
       bst: this.boosting,
       sc: this.score,
