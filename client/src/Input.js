@@ -6,7 +6,7 @@ export class Input {
     this.direction = 0;
     this.boosting = false;
     this.active = false;
-    this.isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    this.isMobile = ('ontouchstart' in window || navigator.maxTouchPoints > 0) || window.innerWidth <= 1024;
 
     this._bindEvents();
 
