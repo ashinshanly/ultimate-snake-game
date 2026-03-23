@@ -60,6 +60,7 @@ export class SnakeRenderer {
         bodyMeshes: [],
         headMesh: null,
         eyes: [],
+        eyeMaterial: null,
         nameMesh: null,
         hue,
         material: this._createSnakeMaterial(hue),
@@ -85,6 +86,7 @@ export class SnakeRenderer {
         emissive: 0xffffff,
         emissiveIntensity: 2,
       });
+      group.eyeMaterial = eyeMat;
       for (let i = 0; i < 2; i++) {
         const eye = new THREE.Mesh(this.eyeGeo, eyeMat);
         group.eyes.push(eye);
@@ -279,12 +281,14 @@ export class SnakeRenderer {
     const group = this.snakes.get(id);
     if (group) {
       this.scene.remove(group.container);
-      // Dispose geometries from this group
-      group.bodyMeshes.forEach(m => {
-        if (m.geometry !== this.segmentGeo) m.geometry.dispose();
-      });
+
       if (group.material) group.material.dispose();
       if (group.headMaterial) group.headMaterial.dispose();
+      if (group.eyeMaterial) group.eyeMaterial.dispose();
+      if (group.nameMesh) {
+        if (group.nameMesh.material?.map) group.nameMesh.material.map.dispose();
+        if (group.nameMesh.material) group.nameMesh.material.dispose();
+      }
       this.snakes.delete(id);
     }
   }
