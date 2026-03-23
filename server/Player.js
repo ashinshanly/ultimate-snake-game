@@ -10,9 +10,9 @@ class Player {
     this.segments = [];
     this.direction = Math.random() * Math.PI * 2;
     this.targetDirection = this.direction;
-    this.speed = 6;
-    this.baseSpeed = 6;
-    this.boostSpeed = 12;
+    this.speed = 9;
+    this.baseSpeed = 9;
+    this.boostSpeed = 15;
     this.headRadius = 12;
     this.segmentSpacing = 8;
     this.turnRate = 0.12;
