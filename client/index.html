@@ -18,7 +18,7 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link
-        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Press+Start+2P&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="src/style.css">
 </head>
@@ -86,10 +86,26 @@
 
         <!-- Mobile Controls Console -->
         <div id="mobile-console">
+            <div id="console-top-strip">
+                <div id="battery-led"></div>
+                <div id="console-status">POWER ON</div>
+            </div>
             <div id="joystick-wrapper"></div>
+            <div id="console-center-btns">
+                <div class="pill-btn-group">
+                    <div class="pill-btn-wrap">
+                        <button id="select-btn" class="pill-btn"></button>
+                        <label>SELECT</label>
+                    </div>
+                    <div class="pill-btn-wrap">
+                        <button id="start-btn" class="pill-btn"></button>
+                        <label>START</label>
+                    </div>
+                </div>
+            </div>
             <div id="mobile-branding">
                 <span class="brand-top">SERPENT</span>
-                <span class="brand-bottom">GAME BOY TYPE-N</span>
+                <span class="brand-bottom">GAME BOY TYPE-MODERN</span>
             </div>
             <div id="boost-wrapper"></div>
         </div>

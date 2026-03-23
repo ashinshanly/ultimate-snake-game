@@ -59,6 +59,11 @@ export class Input {
     const joystickWrapper = document.getElementById('joystick-wrapper');
     if (!boostWrapper || !joystickWrapper) return;
 
+    // === HAPTICS ===
+    this.vibrate = (ms = 10) => {
+      if ('vibrate' in navigator) navigator.vibrate(ms);
+    };
+
     // Create boost button for mobile
     const boostBtn = document.createElement('div');
     boostBtn.id = 'mobile-boost-btn';
@@ -74,6 +79,7 @@ export class Input {
       e.preventDefault();
       e.stopPropagation();
       this.boosting = true;
+      this.vibrate(15);
       boostBtn.classList.add('active');
     };
 
@@ -87,6 +93,31 @@ export class Input {
     boostBtn.addEventListener('touchstart', handleBoostStart, { passive: false });
     boostBtn.addEventListener('touchend', handleBoostEnd, { passive: false });
     boostBtn.addEventListener('touchcancel', handleBoostEnd);
+
+    // === START/SELECT BUTTON EXTERNAL WIRING ===
+    const startBtn = document.getElementById('start-btn');
+    const selectBtn = document.getElementById('select-btn');
+    
+    if (startBtn) {
+      startBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        this.vibrate(20);
+        // Simulate clicking the main play button if it's visible
+        const playBtn = document.getElementById('play-btn');
+        if (playBtn && playBtn.offsetParent !== null) {
+          playBtn.click();
+        }
+      });
+    }
+
+    if (selectBtn) {
+      selectBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        this.vibrate(10);
+        // Maybe toggle leaderboard or something in future
+        console.log('SELECT pressed');
+      });
+    }
 
     // Create Virtual Joystick inside wrapper
     const joystickZone = document.createElement('div');

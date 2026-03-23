@@ -477,80 +477,76 @@ body {
     font-weight: 700;
 }
 
-@media (max-width: 768px) {
-    .game-title {
-        font-size: 3rem;
-    }
-    .game-title span {
-        font-size: 2.2rem;
-    }
-    #player-name, #play-btn, #respawn-btn {
-        width: 100%;
-        max-width: 260px;
-    }
-    
+@media (max-width: 1024px) {
     #hud {
         pointer-events: none;
-        height: auto;
-        bottom: 180px; /* Leave room for console */
+        height: 100%;
+        width: 100%;
     }
     
     #score-display {
-        top: 15px;
-        left: 15px;
-        transform: none;
-        align-items: flex-start;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        align-items: center;
+        background: rgba(0,0,0,0.4);
+        padding: 10px 20px;
+        border-radius: 30px;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(0, 240, 255, 0.2);
     }
     #score-value {
         font-size: 1.8rem;
     }
     
     #leaderboard {
-        width: 150px;
+        width: 140px;
         top: 15px;
         right: 15px;
         background: rgba(10, 10, 20, 0.4);
+        border-radius: 12px;
     }
     #lb-list {
-        max-height: 120px;
+        max-height: 100px;
     }
     .lb-row {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
         padding: 3px 8px;
     }
     #player-rank {
-        padding: 6px 8px;
-        font-size: 0.55rem;
+        padding: 5px 8px;
+        font-size: 0.5rem;
     }
     
     #powerup-display {
-        top: 65px;
-        left: 15px;
-        transform: none;
+        top: 85px;
+        left: 50%;
+        transform: translateX(-50%);
     }
     .powerup-icon {
-        width: 28px;
-        height: 28px;
+        width: 32px;
+        height: 32px;
         font-size: 14px;
     }
     
     #boost-indicator {
         bottom: auto;
-        top: 105px;
-        left: 15px;
-        transform: none;
-        width: 130px;
-        text-align: left;
+        top: 125px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 140px;
+        text-align: center;
     }
     
     #minimap {
         bottom: auto;
-        top: 140px;
+        top: 15px;
         left: 15px;
         right: auto;
-        width: 100px;
-        height: 100px;
-        opacity: 0.7;
+        width: 80px;
+        height: 80px;
+        opacity: 0.8;
+        border-radius: 12px;
     }
     
     #mobile-console {
@@ -558,86 +554,185 @@ body {
     }
 
     #game-canvas {
-        height: calc(100% - 180px); /* Adjust canvas height on mobile */
+        height: calc(100% - 240px); /* Taller console for modern look */
+        mask-image: linear-gradient(to bottom, black 95%, transparent 100%);
+        border-bottom: 2px solid #2d2d2f;
+    }
+
+    #game-container::after {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: calc(100% - 240px);
+        pointer-events: none;
+        background: 
+            linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+            linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+        z-index: 150;
+        background-size: 100% 2px, 3px 100%;
+        opacity: 0.3;
     }
 }
 
-/* ============ MOBILE CONSOLE (Gameboy Style) ============ */
+/* ============ MOBILE CONSOLE (Modern Retro Style) ============ */
 #mobile-console {
-    display: none; /* Desktop hidden */
+    display: none;
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 180px;
-    background: #9ca3af; /* Classic gray console color */
-    border-top: 4px solid #6b7280;
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
-    padding: 10px 20px;
-    z-index: 200;
-    box-shadow: inset 0 4px 10px rgba(0,0,0,0.3);
-}
-
-#mobile-branding {
+    height: 240px;
+    background: #1a1a1b; /* Anthracite black */
+    border-top: 1px solid #2d2d2f;
     display: flex;
     flex-direction: column;
     align-items: center;
-    opacity: 0.6;
-    transform: rotate(-5deg);
+    z-index: 200;
+    box-shadow: 0 -20px 40px rgba(0,0,0,0.5);
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
-.brand-top {
-    font-family: var(--font-display);
-    font-size: 1.2rem;
-    font-weight: 900;
-    color: #1f2937;
-    letter-spacing: 0.2em;
+#console-top-strip {
+    width: 100%;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    padding: 0 25px;
+    gap: 12px;
+    background: rgba(0,0,0,0.2);
 }
 
-.brand-bottom {
-    font-size: 0.5rem;
-    color: #1f2937;
-    font-weight: 700;
-    letter-spacing: 0.1em;
+#battery-led {
+    width: 8px;
+    height: 8px;
+    background: #00ff88;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #00ff88;
+    animation: ledPulse 2s ease-in-out infinite;
+}
+
+#console-status {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 6px;
+    color: #444;
+    letter-spacing: 1px;
+}
+
+@keyframes ledPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.9); }
 }
 
 #joystick-wrapper, #boost-wrapper {
-    position: relative;
-    width: 120px;
-    height: 120px;
+    position: absolute;
+    bottom: 40px;
+    width: 130px;
+    height: 130px;
+}
+
+#joystick-wrapper { left: 15px; }
+#boost-wrapper { right: 15px; }
+
+#console-branding {
+    margin-top: 40px;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    opacity: 0.5;
+    pointer-events: none;
+    text-align: center;
+}
+
+.brand-main {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 0.2em;
+    font-style: italic;
+}
+
+.brand-sub {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 8px;
+    color: #fff;
+    margin-top: 4px;
+    letter-spacing: 2px;
+}
+
+.brand-type {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 5px;
+    color: #666;
+    margin-top: 6px;
+    letter-spacing: 1px;
+}
+
+#console-center-btns {
+    position: absolute;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.pill-btn-group {
+    display: flex;
+    gap: 25px;
+}
+
+.pill-btn-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.pill-btn {
+    width: 45px;
+    height: 12px;
+    background: #222;
+    border: none;
+    border-radius: 10px;
+    box-shadow: 
+        0 4px 0 #000,
+        inset 0 1px 0 rgba(255,255,255,0.1);
+    transform: rotate(-25deg);
+    cursor: pointer;
+}
+
+.pill-btn:active {
+    transform: rotate(-25deg) translateY(2px);
+    box-shadow: 0 2px 0 #000;
+}
+
+.pill-btn-wrap label {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 6px;
+    color: #444;
 }
 
 /* Joystick Overrides */
-#joystick-zone {
-    position: relative !important;
-    width: 100% !important;
-    height: 100% !important;
-    z-index: 10;
-}
-
 .joystick-base {
     position: relative !important;
     left: auto !important;
     top: auto !important;
-    width: 90px !important;
-    height: 90px !important;
-    opacity: 1 !important; /* ALWAYS VISIBLE */
-    background: #374151 !important; /* Dark D-pad circle */
-    border: 4px solid #111827 !important;
-    box-shadow: 2px 2px 0 rgba(255,255,255,0.1), inset 0 0 10px rgba(0,0,0,0.5) !important;
+    width: 110px !important;
+    height: 110px !important;
+    background: #111 !important;
+    border: 4px solid #000 !important;
+    box-shadow: 
+        0 8px 15px rgba(0,0,0,0.5),
+        inset 0 0 20px rgba(255,255,255,0.05) !important;
 }
 
 .joystick-stick {
-    width: 34px !important;
-    height: 34px !important;
-    background: #1f2937 !important;
-    border: 2px solid #000 !important;
-    box-shadow: 4px 4px 10px rgba(0,0,0,0.6) !important;
+    width: 44px !important;
+    height: 44px !important;
+    background: radial-gradient(circle at 30% 30%, #333, #000) !important;
+    border: 1px solid #444 !important;
+    box-shadow: 10px 10px 20px rgba(0,0,0,0.8) !important;
 }
 
 /* Boost Button Overrides */
@@ -645,30 +740,30 @@ body {
     position: relative !important;
     bottom: auto !important;
     right: auto !important;
-    display: flex !important; /* ALWAYS VISIBLE */
-    width: 70px !important;
-    height: 70px !important;
-    background: #dc2626 !important; /* Classic Nintendo Red */
-    border: 4px solid #991b1b !important;
-    box-shadow: 4px 4px 0 #7f1d1d, 0 0 15px rgba(220, 38, 38, 0.3) !important;
+    display: flex !important;
+    width: 80px !important;
+    height: 80px !important;
+    background: #e11d48 !important; /* Modern vibrant red */
+    border: 3px solid #000 !important;
+    box-shadow: 
+        0 8px 0 #881337,
+        0 15px 25px rgba(225, 29, 72, 0.2) !important;
+    border-radius: 50% !important;
 }
 
-#mobile-boost-btn:active, #mobile-boost-btn.active {
-    transform: translate(2px, 2px) !important;
-    box-shadow: 2px 2px 0 #7f1d1d !important;
-    background: #b91c1c !important;
+#mobile-boost-btn:active {
+    transform: translateY(4px) !important;
+    box-shadow: 0 4px 0 #881337 !important;
 }
 
 .boost-label {
-    color: #1a1a1a !important;
-    font-weight: 900 !important;
-    font-size: 12px !important;
+    font-family: 'Press Start 2P', cursive !important;
+    font-size: 8px !important;
+    color: #fff !important;
+    opacity: 0.9 !important;
 }
 
 .boost-icon {
-    font-size: 28px !important;
-}
-
-#mobile-dir-hint {
-    display: none; /* Hide old hints */
+    font-size: 24px !important;
+    filter: drop-shadow(0 0 8px #fff) !important;
 }
