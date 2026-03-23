@@ -1,0 +1,15 @@
+{
+  "name": "neon-serpent",
+  "version": "1.0.0",
+  "description": "Futuristic multiplayer snake game",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev:client": "cd client && npx vite --host",
+    "dev": "node server/index.js",
+    "build": "cd client && npx vite build"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.16.0"
+  }
+}
