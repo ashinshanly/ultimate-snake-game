@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>NEON SERPENT — Multiplayer Snake Arena</title>
+    <meta name="description"
+        content="Enter the neon arena. A futuristic multiplayer snake game where you grow, hunt, and dominate.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Press+Start+2P&display=swap"
+        rel="stylesheet">
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/"
+      }
+    }
+    </script>
+  <script type="module" crossorigin src="/ultimate-snake-game/assets/index-BqAeXZqr.js"></script>
+  <link rel="stylesheet" crossorigin href="/ultimate-snake-game/assets/index-CBSt3Nnk.css">
+</head>
+
+<body>
+    <!-- Join Screen -->
+    <div id="join-screen">
+        <div class="join-container">
+            <h1 class="game-title">NEON<br><span>SERPENT</span></h1>
+            <p class="tagline">ENTER THE ARENA</p>
+            <p class="game-lore">
+                Consume stray energy cores to grow your snake. <br>
+                Cut off rival snakes to shatter them into light. <br>
+                Survive. Evolve. Dominate the grid.
+            </p>
+            <div class="join-form">
+                <input type="text" id="player-name" placeholder="YOUR NAME" maxlength="16" autocomplete="off"
+                    spellcheck="false">
+                <button id="play-btn">
+                    <span class="btn-text">PLAY</span>
+                    <span class="btn-glow"></span>
+                </button>
+            </div>
+            <div class="player-count">
+                <span id="online-count">0</span> PLAYERS ONLINE
+            </div>
+        </div>
+        <div class="bg-particles" id="bg-particles"></div>
+    </div>
+
+    <!-- Game Canvas -->
+    <div id="game-container" style="display:none;">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- HUD -->
+        <div id="hud">
+            <!-- Score -->
+            <div id="score-display">
+                <span class="score-label">LENGTH</span>
+                <span id="score-value">0</span>
+            </div>
+
+            <!-- Boost indicator -->
+            <div id="boost-indicator">
+                <div id="boost-bar"></div>
+                <span>BOOST</span>
+                <span class="boost-instruction desktop-only">CLICK AND HOLD MOUSE TO BOOST</span>
+            </div>
+
+            <!-- Power-up indicators -->
+            <div id="powerup-display"></div>
+
+            <!-- Leaderboard -->
+            <div id="leaderboard">
+                <div class="lb-header">TOP PLAYERS</div>
+                <div id="lb-list"></div>
+                <div id="player-rank">
+                    <span>YOUR RANK</span>
+                    <span id="rank-value">#— / —</span>
+                </div>
+            </div>
+
+            <!-- Minimap -->
+            <canvas id="minimap" width="160" height="160"></canvas>
+        </div>
+
+        <!-- Controls Console -->
+        <div id="mobile-console">
+            <div id="console-top-strip">
+                <div class="console-status-group">
+                    <div id="battery-led"></div>
+                    <div id="console-status">CONTROL DECK ONLINE</div>
+                </div>
+            </div>
+
+            <div class="console-main">
+                <section class="console-panel control-cluster control-cluster-left">
+                    <div id="joystick-wrapper"></div>
+                </section>
+
+                <section class="console-panel control-cluster control-cluster-right">
+                    <div id="boost-wrapper"></div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Death Screen -->
+    <div id="death-screen" style="display:none;">
+        <div class="death-container">
+            <h2 class="death-title">ELIMINATED</h2>
+            <div class="death-stats">
+                <div class="stat-row">
+                    <span>KILLED BY</span>
+                    <span id="death-killer">—</span>
+                </div>
+                <div class="stat-row">
+                    <span>MAX LENGTH</span>
+                    <span id="death-score">0</span>
+                </div>
+                <div class="stat-row">
+                    <span>KILLS</span>
+                    <span id="death-kills">0</span>
+                </div>
+                <div class="stat-row">
+                    <span>SURVIVED</span>
+                    <span id="death-time">0s</span>
+                </div>
+            </div>
+            <button id="respawn-btn">
+                <span class="btn-text">RESPAWN</span>
+                <span class="btn-glow"></span>
+            </button>
+        </div>
+    </div>
+
+</body>
+
+</html>
