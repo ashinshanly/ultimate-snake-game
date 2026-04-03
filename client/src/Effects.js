@@ -1,4 +1,4 @@
-// Particle effects — death explosions, boost trails, surge zones, power-up collection
+// Particle effects — death explosions, surge zones
 import * as THREE from 'three';
 
 export class Effects {
@@ -6,15 +6,23 @@ export class Effects {
     this.scene = scene;
     this.explosions = [];
     this.surgeZones = new Map();
-    this.maxParticlesPerExplosion = 60;
+    this.maxParticlesPerExplosion = 30; // Reduced from 60
+    this._frame = 0;
   }
 
   createDeathExplosion(x, y, hue = 0) {
+    // Limit max concurrent explosions
+    if (this.explosions.length >= 5) {
+      const oldest = this.explosions.shift();
+      this.scene.remove(oldest.points);
+      oldest.points.geometry.dispose();
+      oldest.material.dispose();
+    }
+
     const count = this.maxParticlesPerExplosion;
     const positions = new Float32Array(count * 3);
     const velocities = [];
     const colors = new Float32Array(count * 3);
-    const sizes = new Float32Array(count);
 
     for (let i = 0; i < count; i++) {
       positions[i * 3] = x;
@@ -27,15 +35,13 @@ export class Effects {
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         life: 1.0,
-        decay: 0.008 + Math.random() * 0.015,
+        decay: 0.012 + Math.random() * 0.02, // Faster decay = shorter lifetime
       });
 
       const c = new THREE.Color().setHSL(hue / 360, 1, 0.5 + Math.random() * 0.3);
       colors[i * 3] = c.r;
       colors[i * 3 + 1] = c.g;
       colors[i * 3 + 2] = c.b;
-
-      sizes[i] = 4 + Math.random() * 8;
     }
 
     const geo = new THREE.BufferGeometry();
@@ -65,8 +71,8 @@ export class Effects {
   }
 
   addSurgeZone(zone) {
-    // Create visual ring for surge zone
-    const geo = new THREE.RingGeometry(zone.radius - 5, zone.radius, 64);
+    // Lower poly rings
+    const geo = new THREE.RingGeometry(zone.radius - 5, zone.radius, 32);
     const mat = new THREE.MeshBasicMaterial({
       color: 0xffee00,
       transparent: true,
@@ -77,8 +83,7 @@ export class Effects {
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(zone.x, zone.y, -1);
 
-    // Fill circle
-    const fillGeo = new THREE.CircleGeometry(zone.radius, 64);
+    const fillGeo = new THREE.CircleGeometry(zone.radius, 32);
     const fillMat = new THREE.MeshBasicMaterial({
       color: 0xffaa00,
       transparent: true,
@@ -108,6 +113,8 @@ export class Effects {
   }
 
   update(time) {
+    this._frame++;
+
     // Update explosions
     for (let e = this.explosions.length - 1; e >= 0; e--) {
       const explosion = this.explosions[e];
@@ -121,15 +128,15 @@ export class Effects {
 
         explosion.positions[i * 3] += v.vx;
         explosion.positions[i * 3 + 1] += v.vy;
-        v.vx *= 0.97;
-        v.vy *= 0.97;
+        v.vx *= 0.95;
+        v.vy *= 0.95;
         v.life -= v.decay;
       }
 
       explosion.points.geometry.attributes.position.needsUpdate = true;
-      explosion.material.opacity = Math.max(0, 1 - explosion.age / 80);
+      explosion.material.opacity = Math.max(0, 1 - explosion.age / 60); // faster fade
 
-      if (allDead || explosion.age > 100) {
+      if (allDead || explosion.age > 70) {
         this.scene.remove(explosion.points);
         explosion.points.geometry.dispose();
         explosion.material.dispose();
@@ -137,11 +144,13 @@ export class Effects {
       }
     }
 
-    // Pulse surge zones
-    for (const [id, zone] of this.surgeZones) {
-      const pulse = 0.1 + Math.sin(time * 0.003) * 0.05;
-      zone.material.opacity = pulse;
-      zone.fillMat.opacity = 0.02 + Math.sin(time * 0.004) * 0.01;
+    // Pulse surge zones every 8th frame
+    if (this._frame % 8 === 0) {
+      for (const [id, zone] of this.surgeZones) {
+        const pulse = 0.1 + Math.sin(time * 0.003) * 0.05;
+        zone.material.opacity = pulse;
+        zone.fillMat.opacity = 0.02 + Math.sin(time * 0.004) * 0.01;
+      }
     }
   }
 }

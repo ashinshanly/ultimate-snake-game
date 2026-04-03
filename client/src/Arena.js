@@ -7,6 +7,7 @@ export class Arena {
     this.arenaSize = arenaSize;
     this.particles = null;
     this.particlePositions = null;
+    this.particleCount = 0;
 
     this._createGrid();
     this._createBoundary();
@@ -15,7 +16,8 @@ export class Arena {
 
   _createGrid() {
     const half = this.arenaSize / 2;
-    const gridSpacing = 100;
+    // Increase grid spacing to reduce line count (200 instead of 100)
+    const gridSpacing = 200;
     const material = new THREE.LineBasicMaterial({
       color: 0x1a2a44,
       transparent: true,
@@ -35,16 +37,17 @@ export class Arena {
     const geo = new THREE.BufferGeometry().setFromPoints(points);
     const lines = new THREE.LineSegments(geo, material);
     lines.position.z = -5;
+    lines.frustumCulled = false;
     this.scene.add(lines);
 
-    // Major grid lines (brighter)
+    // Major grid lines (brighter) — increased spacing from 500 to 1000
     const majorMat = new THREE.LineBasicMaterial({
       color: 0x1a3860,
       transparent: true,
       opacity: 0.7,
     });
     const majorPoints = [];
-    const majorSpacing = 500;
+    const majorSpacing = 1000;
     for (let x = -half; x <= half; x += majorSpacing) {
       majorPoints.push(new THREE.Vector3(x, -half, 0));
       majorPoints.push(new THREE.Vector3(x, half, 0));
@@ -56,6 +59,7 @@ export class Arena {
     const majorGeo = new THREE.BufferGeometry().setFromPoints(majorPoints);
     const majorLines = new THREE.LineSegments(majorGeo, majorMat);
     majorLines.position.z = -4;
+    majorLines.frustumCulled = false;
     this.scene.add(majorLines);
   }
 
@@ -94,18 +98,17 @@ export class Arena {
   }
 
   _createAmbientParticles() {
-    const count = 500;
+    // Reduced from 500 to 200 particles
+    const count = 200;
+    this.particleCount = count;
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
-    const sizes = new Float32Array(count);
-    const half = this.arenaSize / 2;
 
     for (let i = 0; i < count; i++) {
       positions[i * 3] = (Math.random() - 0.5) * this.arenaSize;
       positions[i * 3 + 1] = (Math.random() - 0.5) * this.arenaSize;
       positions[i * 3 + 2] = -10 + Math.random() * 20;
 
-      // Neon colors: cyan, pink, purple
       const r = Math.random();
       if (r < 0.33) {
         colors[i * 3] = 0; colors[i * 3 + 1] = 0.94; colors[i * 3 + 2] = 1;
@@ -114,8 +117,6 @@ export class Arena {
       } else {
         colors[i * 3] = 0.67; colors[i * 3 + 1] = 0; colors[i * 3 + 2] = 1;
       }
-
-      sizes[i] = 2 + Math.random() * 4;
     }
 
     this.particlePositions = positions;
@@ -123,7 +124,6 @@ export class Arena {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
     const mat = new THREE.PointsMaterial({
       size: 3,
@@ -140,12 +140,14 @@ export class Arena {
   }
 
   update(time) {
-    // Slowly drift particles
-    if (this.particlePositions) {
-      const positions = this.particles.geometry.attributes.position.array;
-      for (let i = 0; i < positions.length / 3; i++) {
-        positions[i * 3 + 1] += Math.sin(time * 0.0005 + i) * 0.1;
-        positions[i * 3] += Math.cos(time * 0.0003 + i * 0.7) * 0.05;
+    // Update particles every 3rd frame to reduce CPU load
+    if (this.particlePositions && (time | 0) % 3 === 0) {
+      const positions = this.particlePositions;
+      const t1 = time * 0.0005;
+      const t2 = time * 0.0003;
+      for (let i = 0; i < this.particleCount; i++) {
+        positions[i * 3 + 1] += Math.sin(t1 + i) * 0.1;
+        positions[i * 3] += Math.cos(t2 + i * 0.7) * 0.05;
       }
       this.particles.geometry.attributes.position.needsUpdate = true;
     }
