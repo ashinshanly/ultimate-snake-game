@@ -15,36 +15,38 @@ export class Renderer {
     this.scene.background = new THREE.Color(0x060610);
     this.scene.fog = new THREE.FogExp2(0x060610, 0.00015);
 
-    // Camera - orthographic-ish perspective for 2D feel with depth
+    // Camera
     this.camera = new THREE.PerspectiveCamera(60, width / height, 1, 10000);
     this.camera.position.set(0, 0, 800);
     this.camera.lookAt(0, 0, 0);
 
     // Target camera values for smooth transitions
     this.cameraTarget = { x: 0, y: 0, z: 800 };
-    // Increased smoothing down to essentially instantly follow, making mouse 
-    // steering perfectly 1:1 since player remains precisely at screen center.
     this.cameraSmoothing = 0.5;
 
-    // Renderer
+    // Renderer — disable antialiasing for perf, use lower pixel ratio on mobile
+    const isMobile = window.innerWidth <= 1200;
     this.renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: true,
+      antialias: false, // Major perf win
       alpha: false,
+      powerPreference: 'high-performance',
     });
     this.renderer.setSize(width, height, false);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1 : 1.5));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.2;
 
-    // Post-processing — bloom for neon glow
+    // Post-processing — bloom at HALF resolution for massive perf gain
+    const bloomW = Math.round(width * 0.5);
+    const bloomH = Math.round(height * 0.5);
     this.composer = new EffectComposer(this.renderer);
     const renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(renderPass);
 
     this.bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(width, height),
-      1.5,  // strength
+      new THREE.Vector2(bloomW, bloomH),
+      1.2,  // strength (reduced from 1.5)
       0.4,  // radius
       0.85  // threshold
     );
@@ -53,8 +55,12 @@ export class Renderer {
     // Ambient light
     this.scene.add(new THREE.AmbientLight(0x222244, 0.5));
 
-    // Handle resize
-    window.addEventListener('resize', () => this._onResize());
+    // Debounce resize handler
+    this._resizeTimeout = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(this._resizeTimeout);
+      this._resizeTimeout = setTimeout(() => this._onResize(), 200);
+    });
   }
 
   _getViewportSize() {
@@ -72,13 +78,14 @@ export class Renderer {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
     this.composer.setSize(w, h);
-    this.bloomPass.resolution.set(w, h);
+    const bloomW = Math.round(w * 0.5);
+    const bloomH = Math.round(h * 0.5);
+    this.bloomPass.resolution.set(bloomW, bloomH);
   }
 
   setCameraTarget(x, y, snakeLength) {
     this.cameraTarget.x = this._getWrappedTarget(this.cameraTarget.x, x);
     this.cameraTarget.y = this._getWrappedTarget(this.cameraTarget.y, y);
-    // Zoom out as snake grows
     this.cameraTarget.z = 800 + Math.min(snakeLength * 2, 600);
   }
 

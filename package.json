@@ -2,14 +2,20 @@
   "name": "neon-serpent",
   "version": "1.0.0",
   "description": "Futuristic multiplayer snake game",
+  "homepage": "https://ashinshanly.github.io/ultimate-snake-game",
   "scripts": {
     "start": "node server/index.js",
     "dev:client": "cd client && npx vite --host",
     "dev": "node server/index.js",
-    "build": "cd client && npx vite build"
+    "build": "cd client && npx vite build",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d client/dist"
   },
   "dependencies": {
     "express": "^4.18.2",
+    "gh-pages": "^6.1.1",
+    "three": "^0.162.0",
+    "vite": "^5.0.0",
     "ws": "^8.16.0"
   }
 }

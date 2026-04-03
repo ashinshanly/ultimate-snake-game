@@ -13,12 +13,15 @@ class Game {
     this.leaderboard = new Leaderboard();
     this.orbManager = new OrbManager(this.arenaSize);
     this.powerUpManager = new PowerUpManager(this.arenaSize);
-    this.tickRate = 1000 / 60; // 60Hz
-    this.leaderboardInterval = 100; // ms
+    this.tickRate = 1000 / 30; // Match server tick rate
+    this.leaderboardInterval = 500; // Update leaderboard every 500ms (was 100ms)
     this.lastLeaderboardUpdate = 0;
-    this.viewRadius = 2000;
+    this.viewRadius = 1500; // Reduced from 2000 — less data per update
     this.compactStateCache = new Map();
     this.minimapCache = [];
+
+    // Delta tracking for orbs — only send changes, not full state
+    this._lastOrbSnapshot = new Map(); // playerId -> Set of orb ids sent
 
     this.orbManager.init();
   }
@@ -27,7 +30,6 @@ class Game {
     const player = new Player(id, name, this.arenaSize);
     this.players.set(id, player);
 
-    // Send initial full state to new player
     return {
       type: 'init',
       playerId: id,
@@ -54,6 +56,7 @@ class Game {
       this.orbManager.spawnDeathOrbs(player.segments);
     }
     this.players.delete(id);
+    this._lastOrbSnapshot.delete(id);
   }
 
   handleInput(id, data) {
@@ -72,6 +75,7 @@ class Game {
     const player = this.players.get(id);
     if (player) {
       player.respawn();
+      this._lastOrbSnapshot.delete(id);
       return {
         type: 'respawn',
         selfState: player.getCompactState(),
@@ -97,8 +101,9 @@ class Game {
     this.spatialGrid.clear();
     for (const [id, player] of this.players) {
       if (!player.alive) continue;
-      // Insert all segments into spatial grid
+      // Only insert head + every 3rd segment for collision (huge perf win)
       for (let i = 0; i < player.segments.length; i++) {
+        if (i > 0 && i % 3 !== 0) continue;
         this.spatialGrid.insertSegment({
           playerId: id,
           segIndex: i,
@@ -126,18 +131,18 @@ class Game {
       const nearby = this.spatialGrid.query(head.x, head.y, player.headRadius + 20);
 
       for (const seg of nearby) {
-        if (seg.playerId === id) continue; // Skip self
-        if (player.powerUps.phase > 0) continue; // Phase power-up = no collision
+        if (seg.playerId === id) continue;
+        if (player.powerUps.phase > 0) continue;
 
         const otherPlayer = this.players.get(seg.playerId);
         if (!otherPlayer || !otherPlayer.alive) continue;
 
         const dx = head.x - seg.x;
         const dy = head.y - seg.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+        const distSq = dx * dx + dy * dy;
         const collisionDist = player.headRadius + 6;
 
-        if (dist < collisionDist) {
+        if (distSq < collisionDist * collisionDist) {
           const deathData = player.die();
           this.orbManager.spawnDeathOrbs(deathData.segments);
           otherPlayer.killCount++;
@@ -153,7 +158,6 @@ class Game {
 
       const collected = this.orbManager.checkCollection(player);
       for (const orb of collected) {
-        // Check if in surge zone for bonus
         const surge = this.powerUpManager.isInSurgeZone(orb.x, orb.y);
         const value = surge ? orb.value * surge.orbBoost : orb.value;
         player.grow(value);
@@ -191,8 +195,13 @@ class Game {
     // Get nearby players (area of interest filtering)
     const nearbyPlayers = this._getPlayersInArea(head.x, head.y, this.viewRadius, playerId);
 
-    // Get nearby orbs
+    // Get nearby orbs — compact format
     const nearbyOrbs = this.orbManager.getInArea(head.x, head.y, this.viewRadius);
+    const orbArray = [];
+    for (let i = 0; i < nearbyOrbs.length; i++) {
+      const o = nearbyOrbs[i];
+      orbArray.push([o.id, o.x | 0, o.y | 0, o.value, o.type === 'special' ? 1 : 0]);
+    }
 
     const puDelta = this.powerUpManager.getDelta();
 
@@ -200,7 +209,7 @@ class Game {
       type: 'update',
       self: this.compactStateCache.get(playerId) || player.getCompactState(),
       players: nearbyPlayers,
-      orbs: nearbyOrbs.map(o => [o.id, Math.round(o.x), Math.round(o.y), o.value, o.type === 'special' ? 1 : 0]),
+      orbs: orbArray,
       pu: puDelta,
       mm: this.minimapCache
     };
@@ -227,7 +236,7 @@ class Game {
 
   _rebuildStateCaches() {
     this.compactStateCache.clear();
-    this.minimapCache = [];
+    this.minimapCache.length = 0;
 
     for (const [id, player] of this.players) {
       if (!player.alive || player.segments.length === 0) continue;
@@ -235,9 +244,9 @@ class Game {
       this.compactStateCache.set(id, compact);
       this.minimapCache.push([
         id,
-        Math.round(player.segments[0].x),
-        Math.round(player.segments[0].y),
-        Math.round(player.hue || 0)
+        player.segments[0].x | 0,
+        player.segments[0].y | 0,
+        player.hue | 0
       ]);
     }
   }

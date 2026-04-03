@@ -17,7 +17,11 @@ export class Network {
 
   connect() {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const url = `${protocol}//${location.host}`;
+    // Use environment variable for production URL, fallback to location.host for local dev
+    const wsHost = import.meta.env.VITE_WS_URL || location.host;
+    const url = `${protocol}//${wsHost}`;
+    
+    console.log(`Connecting to server: ${url}`);
     this.ws = new WebSocket(url);
 
     this.ws.onopen = () => {

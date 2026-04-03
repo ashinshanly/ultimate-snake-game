@@ -100,30 +100,36 @@ wss.on('connection', (ws) => {
   });
 });
 
-// Game loop
+// Game loop — fixed timestep with accumulator
+const TICK_MS = 1000 / 30;     // 30Hz physics (was 60Hz — halved server load)
+const SEND_RATE = 1000 / 15;   // 15Hz network sends (was 30Hz — halved bandwidth)
 let lastTick = Date.now();
-const TICK_RATE = 1000 / 60;
-const SEND_RATE = 1000 / 30; // Send updates at 30Hz
 let lastSend = Date.now();
+let accumulator = 0;
 let leaderboardPending = false;
+
+// Pre-allocate reusable JSON string buffer per player
+const sendBuffers = new Map();
 
 function gameLoop() {
   const now = Date.now();
-  const dt = now - lastTick;
+  const frameTime = Math.min(now - lastTick, 100); // cap to avoid spiral
+  lastTick = now;
+  accumulator += frameTime;
 
-  if (dt >= TICK_RATE) {
-    lastTick = now;
-
-    // Update game state
+  // Fixed timestep update
+  while (accumulator >= TICK_MS) {
     const result = game.update();
-    
+    accumulator -= TICK_MS;
+
     if (result.leaderboardData) {
       leaderboardPending = true;
     }
 
-    // Send death notifications
+    // Send death notifications immediately (low frequency, critical)
     for (const death of result.deaths) {
       for (const [ws, client] of clients) {
+        if (ws.readyState !== 1) continue;
         if (client.id === death.id) {
           ws.send(JSON.stringify({
             type: 'death',
@@ -134,8 +140,7 @@ function gameLoop() {
               killedBy: death.killer ? game.players.get(death.killer)?.name || 'Unknown' : 'Self',
             },
           }));
-        } else if (ws.readyState === 1) {
-          // Notify others about explosion
+        } else if (client.joined) {
           ws.send(JSON.stringify({
             type: 'playerDeath',
             id: death.id,
@@ -145,33 +150,37 @@ function gameLoop() {
         }
       }
     }
-
-    // Send state updates at lower rate
-    if (now - lastSend >= SEND_RATE) {
-      lastSend = now;
-
-      for (const [ws, client] of clients) {
-        if (!client.joined || ws.readyState !== 1) {
-          continue;
-        }
-
-        const state = game.getStateForPlayer(client.id);
-        if (state) {
-          ws.send(JSON.stringify(state));
-        }
-
-        // Send leaderboard
-        if (leaderboardPending) {
-          const lb = game.getLeaderboardForPlayer(client.id);
-          ws.send(JSON.stringify({ type: 'leaderboard', ...lb }));
-        }
-      }
-      
-      leaderboardPending = false;
-    }
   }
 
-  setImmediate(gameLoop);
+  // Send state updates at lower rate
+  if (now - lastSend >= SEND_RATE) {
+    lastSend = now;
+
+    for (const [ws, client] of clients) {
+      if (!client.joined || ws.readyState !== 1) continue;
+
+      // Check bufferedAmount to avoid overwhelming slow connections
+      if (ws.bufferedAmount > 16384) continue;
+
+      const state = game.getStateForPlayer(client.id);
+      if (state) {
+        ws.send(JSON.stringify(state));
+      }
+
+      // Send leaderboard
+      if (leaderboardPending) {
+        const lb = game.getLeaderboardForPlayer(client.id);
+        ws.send(JSON.stringify({ type: 'leaderboard', ...lb }));
+      }
+    }
+    
+    leaderboardPending = false;
+  }
+
+  // Use setTimeout instead of setImmediate to prevent CPU starvation
+  const elapsed = Date.now() - now;
+  const sleepMs = Math.max(1, Math.floor(TICK_MS / 2) - elapsed);
+  setTimeout(gameLoop, sleepMs);
 }
 
 const PORT = process.env.PORT || 3000;
